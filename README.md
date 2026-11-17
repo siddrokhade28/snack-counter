@@ -26,7 +26,7 @@ mvn spring-boot:run      # http://localhost:8085
   Oslo (NOK), Bengaluru (INR), a visitor from India refilling Oslo, budget approval, HR approving and
   rejecting, and the combined report in NOK. `demo.sh` runs exactly these blocks, so the two can't drift apart.
 
-## What the PDF asked for, and where it is
+## Requirements and where it is
 
 | Deliverable | Where |
 |---|---|
