@@ -1,0 +1,2752 @@
+{
+  "info": {
+    "_postman_id": "c93b7fba-9260-5f06-83c8-50db2e4db86d",
+    "name": "Snack Counter Automation (Oslo + Bengaluru)",
+    "description": "Every API of the snack counter, in demo order: **A** Oslo (NOK), **B** Bengaluru (INR), **C** a visitor from India refilling Oslo, **D** budget limits, **E** HR rejecting, **F** the monthly report in NOK, **G** explore and errors.\n\n1. Start the app: `mvn spring-boot:run` (port 8085). Start fresh for the expected names and totals.\n2. Run the requests top to bottom (or the whole collection with Postman's Runner).\n3. Each request has checks (Test Results tab) and saves the refill/claim ids it gets, so you never type ids.\n\nChange `baseUrl` under the collection's Variables if the app runs elsewhere. Swagger UI: http://localhost:8085/swagger-ui.html",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8085"
+    },
+    {
+      "key": "osloRefillId",
+      "value": ""
+    },
+    {
+      "key": "osloClaimId",
+      "value": ""
+    },
+    {
+      "key": "blrRefillId",
+      "value": ""
+    },
+    {
+      "key": "blrClaimId",
+      "value": ""
+    },
+    {
+      "key": "visitorRefillId",
+      "value": ""
+    },
+    {
+      "key": "visitorClaimId",
+      "value": ""
+    },
+    {
+      "key": "fillRefillId",
+      "value": ""
+    },
+    {
+      "key": "budgetRefillId",
+      "value": ""
+    },
+    {
+      "key": "approvalRefillId",
+      "value": ""
+    },
+    {
+      "key": "rejectRefillId",
+      "value": ""
+    },
+    {
+      "key": "rejectClaimId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "0. Start here",
+      "description": "Start the app (`mvn spring-boot:run`, port 8085). For the names and amounts in the checks to match, start from a **fresh app** (storage is in memory). Refill and claim ids are captured automatically, so you never type them.",
+      "item": [
+        {
+          "name": "0.1 App is up, no refills yet",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.text() ? pm.response.json() : {};",
+                  "pm.test(\"No refills yet (fresh start)\", () => { pm.expect(body).to.be.an('array').that.is.empty; });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/refills",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "refills"
+              ]
+            },
+            "description": "An empty list means a fresh start. If it isn't empty, restart the app for the expected names and totals."
+          }
+        }
+      ]
+    },
+    {
+      "name": "A. Oslo (NOK): empty box to reimbursed",
+      "description": "One refill end to end at the Oslo office.",
+      "item": [
+        {
+          "name": "A1. Ingrid (E100) checks in at Oslo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 204\", () => pm.response.to.have.status(204));",
+                  "const body = pm.response.text() ? pm.response.json() : {};"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/presence/E100",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "presence",
+                "E100"
+              ]
+            },
+            "description": "Only volunteers at an office today are asked to buy. Ingrid is at OSLO today.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"office\": \"OSLO\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "A2. Lars (E101) checks in at Oslo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 204\", () => pm.response.to.have.status(204));",
+                  "const body = pm.response.text() ? pm.response.json() : {};"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/presence/E101",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "presence",
+                "E101"
+              ]
+            },
+            "description": "Only volunteers at an office today are asked to buy. Lars is at OSLO today.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"office\": \"OSLO\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "A3. Sofie reports the Oslo box empty",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 201\", () => pm.response.to.have.status(201));",
+                  "const body = pm.response.text() ? pm.response.json() : {};",
+                  "pm.test(\"status is OFFERED\", () => { pm.expect(body.status).to.eql(\"OFFERED\"); });",
+                  "pm.test(\"office is OSLO\", () => { pm.expect(body.office).to.eql(\"OSLO\"); });",
+                  "pm.test(\"assignee is E100\", () => { pm.expect(body.assignee).to.eql(\"E100\"); });",
+                  "if (body.id !== undefined && body.id !== null) pm.collectionVariables.set(\"osloRefillId\", body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/refills/empty",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "refills",
+                "empty"
+              ]
+            },
+            "description": "A refill is created and offered to the fairest volunteer present. Ingrid and Lars are tied, so the lower id (Ingrid) is asked.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"office\": \"OSLO\",\n  \"reportedBy\": \"E102\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "A4. Lars reports the same empty box",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 201\", () => pm.response.to.have.status(201));",
+                  "const body = pm.response.text() ? pm.response.json() : {};",
+                  "pm.test(\"Same refill as before: nobody buys twice\", () => { pm.expect(body.id).to.eql(Number(pm.collectionVariables.get('osloRefillId'))); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/refills/empty",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "refills",
+                "empty"
+              ]
+            },
+            "description": "A second report joins the open refill instead of starting another.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"office\": \"OSLO\",\n  \"reportedBy\": \"E101\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "A5. Ingrid commits (\"I'll do it\")",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.text() ? pm.response.json() : {};",
+                  "pm.test(\"status is COMMITTED\", () => { pm.expect(body.status).to.eql(\"COMMITTED\"); });",
+                  "pm.test(\"assignee is E100\", () => { pm.expect(body.assignee).to.eql(\"E100\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/refills/{{osloRefillId}}/commit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "refills",
+                "{{osloRefillId}}",
+                "commit"
+              ]
+            },
+            "description": "The #snacks-oslo channel is told: Ingrid is buying, don't buy today.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeId\": \"E100\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "A6. Lars tries to commit too (409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 409\", () => pm.response.to.have.status(409));",
+                  "const body = pm.response.text() ? pm.response.json() : {};",
+                  "pm.test(\"Says who is buying\", () => { pm.expect(body.detail).to.include('already being bought by Ingrid'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/refills/{{osloRefillId}}/commit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "refills",
+                "{{osloRefillId}}",
+                "commit"
+              ]
+            },
+            "description": "Only one person can commit. This also holds under a real race (CommitConflictTest).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeId\": \"E101\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "A7. Ingrid uploads her 450 NOK receipt",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.text() ? pm.response.json() : {};",
+                  "pm.test(\"status is CLAIM_SUBMITTED\", () => { pm.expect(body.status).to.eql(\"CLAIM_SUBMITTED\"); });",
+                  "pm.test(\"HR claim filed\", () => { pm.expect(body.claimId).to.match(/^HR-\\d+$/); });",
+                  "if (body.claimId !== undefined && body.claimId !== null) pm.collectionVariables.set(\"osloClaimId\", body.claimId);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/refills/{{osloRefillId}}/receipt",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "refills",
+                "{{osloRefillId}}",
+                "receipt"
+              ]
+            },
+            "description": "Within budget, so the HR claim is filed straight away.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeId\": \"E100\",\n  \"amount\": 450,\n  \"currency\": \"NOK\",\n  \"items\": [\n    \"chips\",\n    \"bananas\"\n  ],\n  \"receiptImageBase64\": \"AQID\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "A8. HR approves Ingrid's claim (simulated HR)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.text() ? pm.response.json() : {};"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/sim/hr/claims/{{osloClaimId}}/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "sim",
+                "hr",
+                "claims",
+                "{{osloClaimId}}",
+                "approve"
+              ]
+            },
+            "description": "Plays the HR system. The app learns about it on its next scheduled check (next request)."
+          }
+        },
+        {
+          "name": "A9. Run the scheduled checks now (tick)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.text() ? pm.response.json() : {};"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/sim/tick",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "sim",
+                "tick"
+              ]
+            },
+            "description": "What runs every minute: deadlines and HR decisions."
+          }
+        },
+        {
+          "name": "A10. Oslo refill is reimbursed",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.text() ? pm.response.json() : {};",
+                  "pm.test(\"status is REIMBURSED\", () => { pm.expect(body.status).to.eql(\"REIMBURSED\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/refills/{{osloRefillId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "refills",
+                "{{osloRefillId}}"
+              ]
+            },
+            "description": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "B. Bengaluru (INR): decline, handover, the right currency",
+      "description": "The India office, with its own budget, currency and time zone.",
+      "item": [
+        {
+          "name": "B1. Priya (E200) checks in at Bengaluru",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 204\", () => pm.response.to.have.status(204));",
+                  "const body = pm.response.text() ? pm.response.json() : {};"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/presence/E200",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "presence",
+                "E200"
+              ]
+            },
+            "description": "Only volunteers at an office today are asked to buy. Priya is at BENGALURU today.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"office\": \"BENGALURU\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "B2. Arjun (E201) checks in at Bengaluru",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 204\", () => pm.response.to.have.status(204));",
+                  "const body = pm.response.text() ? pm.response.json() : {};"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/presence/E201",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "presence",
+                "E201"
+              ]
+            },
+            "description": "Only volunteers at an office today are asked to buy. Arjun is at BENGALURU today.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"office\": \"BENGALURU\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "B3. A colleague (not a volunteer) reports the Bengaluru box empty",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 201\", () => pm.response.to.have.status(201));",
+                  "const body = pm.response.text() ? pm.response.json() : {};",
+                  "pm.test(\"status is OFFERED\", () => { pm.expect(body.status).to.eql(\"OFFERED\"); });",
+                  "pm.test(\"office is BENGALURU\", () => { pm.expect(body.office).to.eql(\"BENGALURU\"); });",
+                  "pm.test(\"assignee is E200\", () => { pm.expect(body.assignee).to.eql(\"E200\"); });",
+                  "if (body.id !== undefined && body.id !== null) pm.collectionVariables.set(\"blrRefillId\", body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/refills/empty",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "refills",
+                "empty"
+              ]
+            },
+            "description": "Anyone can report. Priya is asked.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"office\": \"BENGALURU\",\n  \"reportedBy\": \"E250\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "B4. Priya declines (\"can't today\")",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.text() ? pm.response.json() : {};",
+                  "pm.test(\"status is OFFERED\", () => { pm.expect(body.status).to.eql(\"OFFERED\"); });",
+                  "pm.test(\"assignee is E201\", () => { pm.expect(body.assignee).to.eql(\"E201\"); });",
+                  "pm.test(\"Priya is not asked again\", () => { pm.expect(body.handedOff).to.include('E200'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/refills/{{blrRefillId}}/decline",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "refills",
+                "{{blrRefillId}}",
+                "decline"
+              ]
+            },
+            "description": "Handed to the next fairest volunteer at once.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeId\": \"E200\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "B5. Arjun commits",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.text() ? pm.response.json() : {};",
+                  "pm.test(\"status is COMMITTED\", () => { pm.expect(body.status).to.eql(\"COMMITTED\"); });",
+                  "pm.test(\"assignee is E201\", () => { pm.expect(body.assignee).to.eql(\"E201\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/refills/{{blrRefillId}}/commit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "refills",
+                "{{blrRefillId}}",
+                "commit"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeId\": \"E201\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "B6. Arjun tries to pay in NOK (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 400\", () => pm.response.to.have.status(400));",
+                  "const body = pm.response.text() ? pm.response.json() : {};",
+                  "pm.test(\"Explains the currency rule\", () => { pm.expect(body.detail).to.eql('The BENGALURU box is paid in INR, not NOK'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/refills/{{blrRefillId}}/receipt",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "refills",
+                "{{blrRefillId}}",
+                "receipt"
+              ]
+            },
+            "description": "The Bengaluru box is paid from the Bengaluru budget, in INR.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeId\": \"E201\",\n  \"amount\": 300,\n  \"currency\": \"NOK\",\n  \"items\": [],\n  \"receiptImageBase64\": \"AQID\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "B7. Arjun uploads his 2 500 INR receipt",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.text() ? pm.response.json() : {};",
+                  "pm.test(\"status is CLAIM_SUBMITTED\", () => { pm.expect(body.status).to.eql(\"CLAIM_SUBMITTED\"); });",
+                  "pm.test(\"Amount in INR\", () => { pm.expect(body.receipt.amount.currency).to.eql('INR'); });",
+                  "if (body.claimId !== undefined && body.claimId !== null) pm.collectionVariables.set(\"blrClaimId\", body.claimId);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/refills/{{blrRefillId}}/receipt",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "refills",
+                "{{blrRefillId}}",
+                "receipt"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeId\": \"E201\",\n  \"amount\": 2500,\n  \"currency\": \"INR\",\n  \"items\": [\n    \"samosas\",\n    \"chai\",\n    \"biscuits\"\n  ],\n  \"receiptImageBase64\": \"AQID\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "C. Visitor: Meera from Bengaluru refills the Oslo box",
+      "description": "Visitors refill where they are: that office's budget and currency; HR pays them in their payroll currency.",
+      "item": [
+        {
+          "name": "C1. Meera (E202) checks in at Oslo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 204\", () => pm.response.to.have.status(204));",
+                  "const body = pm.response.text() ? pm.response.json() : {};"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/presence/E202",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "presence",
+                "E202"
+              ]
+            },
+            "description": "Only volunteers at an office today are asked to buy. Meera is at OSLO today.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"office\": \"OSLO\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "C2. The Oslo box is empty again",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 201\", () => pm.response.to.have.status(201));",
+                  "const body = pm.response.text() ? pm.response.json() : {};",
+                  "pm.test(\"status is OFFERED\", () => { pm.expect(body.status).to.eql(\"OFFERED\"); });",
+                  "pm.test(\"Fairness: not Ingrid again, Lars is asked\", () => { pm.expect(body.assignee).to.eql('E101'); });",
+                  "if (body.id !== undefined && body.id !== null) pm.collectionVariables.set(\"visitorRefillId\", body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/refills/empty",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "refills",
+                "empty"
+              ]
+            },
+            "description": "Ingrid already did a refill, so she goes to the back. Lars and Meera are tied; the lower id (Lars) is asked.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"office\": \"OSLO\",\n  \"reportedBy\": \"E100\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "C3. Meera steps in before Lars answers",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.text() ? pm.response.json() : {};",
+                  "pm.test(\"status is COMMITTED\", () => { pm.expect(body.status).to.eql(\"COMMITTED\"); });",
+                  "pm.test(\"assignee is E202\", () => { pm.expect(body.assignee).to.eql(\"E202\"); });",
+                  "pm.test(\"office is OSLO\", () => { pm.expect(body.office).to.eql(\"OSLO\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/refills/{{visitorRefillId}}/commit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "refills",
+                "{{visitorRefillId}}",
+                "commit"
+              ]
+            },
+            "description": "Anyone at the office can take an unclaimed refill; Lars is told he doesn't need to buy.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeId\": \"E202\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "C4. Meera pays 1 100 NOK from the Oslo budget",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.text() ? pm.response.json() : {};",
+                  "pm.test(\"status is CLAIM_SUBMITTED\", () => { pm.expect(body.status).to.eql(\"CLAIM_SUBMITTED\"); });",
+                  "if (body.claimId !== undefined && body.claimId !== null) pm.collectionVariables.set(\"visitorClaimId\", body.claimId);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/refills/{{visitorRefillId}}/receipt",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "refills",
+                "{{visitorRefillId}}",
+                "receipt"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeId\": \"E202\",\n  \"amount\": 1100,\n  \"currency\": \"NOK\",\n  \"items\": [\n    \"fruit\",\n    \"nuts\"\n  ],\n  \"receiptImageBase64\": \"AQID\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "C5. HR has Meera's claim, in NOK",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.text() ? pm.response.json() : {};",
+                  "pm.test(\"Claim for Meera in NOK\", () => { const c = body.find(x => x.claimId === pm.collectionVariables.get('visitorClaimId')); pm.expect(c.employeeId).to.eql('E202'); pm.expect(c.amount.currency).to.eql('NOK'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/sim/hr/claims",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "sim",
+                "hr",
+                "claims"
+              ]
+            },
+            "description": "HR converts to Meera's payroll currency (INR) when it pays her."
+          }
+        }
+      ]
+    },
+    {
+      "name": "D. Budget limits (Oslo)",
+      "description": "Oslo has 6 000 NOK a month. After A and C it has spent 1 550; three 1 200 NOK rounds leave 850.",
+      "item": [
+        {
+          "name": "D1a. Round 1/3: report Oslo empty",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 201\", () => pm.response.to.have.status(201));",
+                  "const body = pm.response.text() ? pm.response.json() : {};",
+                  "if (body.id !== undefined && body.id !== null) pm.collectionVariables.set(\"fillRefillId\", body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/refills/empty",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "refills",
+                "empty"
+              ]
+            },
+            "description": "Filling up the Oslo budget quickly so the limits show.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"office\": \"OSLO\",\n  \"reportedBy\": \"E101\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "D1b. Round 1/3: Ingrid steps in",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.text() ? pm.response.json() : {};",
+                  "pm.test(\"status is COMMITTED\", () => { pm.expect(body.status).to.eql(\"COMMITTED\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/refills/{{fillRefillId}}/commit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "refills",
+                "{{fillRefillId}}",
+                "commit"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeId\": \"E100\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "D1c. Round 1/3: 1 200 NOK receipt",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.text() ? pm.response.json() : {};",
+                  "pm.test(\"status is CLAIM_SUBMITTED\", () => { pm.expect(body.status).to.eql(\"CLAIM_SUBMITTED\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/refills/{{fillRefillId}}/receipt",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "refills",
+                "{{fillRefillId}}",
+                "receipt"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeId\": \"E100\",\n  \"amount\": 1200,\n  \"currency\": \"NOK\",\n  \"items\": [\n    \"fruit\"\n  ],\n  \"receiptImageBase64\": \"AQID\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "D2a. Round 2/3: report Oslo empty",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 201\", () => pm.response.to.have.status(201));",
+                  "const body = pm.response.text() ? pm.response.json() : {};",
+                  "if (body.id !== undefined && body.id !== null) pm.collectionVariables.set(\"fillRefillId\", body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/refills/empty",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "refills",
+                "empty"
+              ]
+            },
+            "description": "Filling up the Oslo budget quickly so the limits show.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"office\": \"OSLO\",\n  \"reportedBy\": \"E101\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "D2b. Round 2/3: Ingrid steps in",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.text() ? pm.response.json() : {};",
+                  "pm.test(\"status is COMMITTED\", () => { pm.expect(body.status).to.eql(\"COMMITTED\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/refills/{{fillRefillId}}/commit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "refills",
+                "{{fillRefillId}}",
+                "commit"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeId\": \"E100\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "D2c. Round 2/3: 1 200 NOK receipt",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.text() ? pm.response.json() : {};",
+                  "pm.test(\"status is CLAIM_SUBMITTED\", () => { pm.expect(body.status).to.eql(\"CLAIM_SUBMITTED\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/refills/{{fillRefillId}}/receipt",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "refills",
+                "{{fillRefillId}}",
+                "receipt"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeId\": \"E100\",\n  \"amount\": 1200,\n  \"currency\": \"NOK\",\n  \"items\": [\n    \"fruit\"\n  ],\n  \"receiptImageBase64\": \"AQID\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "D3a. Round 3/3: report Oslo empty",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 201\", () => pm.response.to.have.status(201));",
+                  "const body = pm.response.text() ? pm.response.json() : {};",
+                  "if (body.id !== undefined && body.id !== null) pm.collectionVariables.set(\"fillRefillId\", body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/refills/empty",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "refills",
+                "empty"
+              ]
+            },
+            "description": "Filling up the Oslo budget quickly so the limits show.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"office\": \"OSLO\",\n  \"reportedBy\": \"E101\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "D3b. Round 3/3: Ingrid steps in",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.text() ? pm.response.json() : {};",
+                  "pm.test(\"status is COMMITTED\", () => { pm.expect(body.status).to.eql(\"COMMITTED\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/refills/{{fillRefillId}}/commit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "refills",
+                "{{fillRefillId}}",
+                "commit"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeId\": \"E100\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "D3c. Round 3/3: 1 200 NOK receipt",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.text() ? pm.response.json() : {};",
+                  "pm.test(\"status is CLAIM_SUBMITTED\", () => { pm.expect(body.status).to.eql(\"CLAIM_SUBMITTED\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/refills/{{fillRefillId}}/receipt",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "refills",
+                "{{fillRefillId}}",
+                "receipt"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeId\": \"E100\",\n  \"amount\": 1200,\n  \"currency\": \"NOK\",\n  \"items\": [\n    \"fruit\"\n  ],\n  \"receiptImageBase64\": \"AQID\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "D4. Oslo box empty again",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 201\", () => pm.response.to.have.status(201));",
+                  "const body = pm.response.text() ? pm.response.json() : {};",
+                  "pm.test(\"status is OFFERED\", () => { pm.expect(body.status).to.eql(\"OFFERED\"); });",
+                  "if (body.id !== undefined && body.id !== null) pm.collectionVariables.set(\"budgetRefillId\", body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/refills/empty",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "refills",
+                "empty"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"office\": \"OSLO\",\n  \"reportedBy\": \"E102\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "D5. Ingrid commits",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.text() ? pm.response.json() : {};",
+                  "pm.test(\"status is COMMITTED\", () => { pm.expect(body.status).to.eql(\"COMMITTED\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/refills/{{budgetRefillId}}/commit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "refills",
+                "{{budgetRefillId}}",
+                "commit"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeId\": \"E100\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "D6. Chat: Ingrid is told how much she may spend",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.text() ? pm.response.json() : {};",
+                  "pm.test(\"Spending cap in her direct message\", () => { const last = body.filter(m => m.to === 'E100').pop(); console.log(last.text); pm.expect(last.text).to.include('Spend up to 850.00 NOK'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/sim/chat",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "sim",
+                "chat"
+              ]
+            },
+            "description": "The cap is the smaller of the typical maximum (1 200) and what's left (850)."
+          }
+        },
+        {
+          "name": "D7. Ingrid spends 1 000 NOK, more than the 850 left",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.text() ? pm.response.json() : {};",
+                  "pm.test(\"status is AWAITING_ADMIN_APPROVAL\", () => { pm.expect(body.status).to.eql(\"AWAITING_ADMIN_APPROVAL\"); });",
+                  "pm.test(\"No HR claim yet\", () => { pm.expect(body.claimId).to.be.null; });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/refills/{{budgetRefillId}}/receipt",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "refills",
+                "{{budgetRefillId}}",
+                "receipt"
+              ]
+            },
+            "description": "Not a hard stop (the box would stay empty): the Oslo admin decides.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeId\": \"E100\",\n  \"amount\": 1000,\n  \"currency\": \"NOK\",\n  \"items\": [\n    \"coffee\"\n  ],\n  \"receiptImageBase64\": \"AQID\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "D8. Ingrid tries to approve her own receipt (403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 403\", () => pm.response.to.have.status(403));",
+                  "const body = pm.response.text() ? pm.response.json() : {};",
+                  "pm.test(\"Not an admin\", () => { pm.expect(body.detail).to.eql('E100 is not a snack admin for OSLO'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/refills/{{budgetRefillId}}/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "refills",
+                "{{budgetRefillId}}",
+                "approve"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"adminId\": \"E100\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "D9. The Oslo admin approves: the HR claim is filed",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.text() ? pm.response.json() : {};",
+                  "pm.test(\"status is CLAIM_SUBMITTED\", () => { pm.expect(body.status).to.eql(\"CLAIM_SUBMITTED\"); });",
+                  "pm.test(\"HR claim filed\", () => { pm.expect(body.claimId).to.match(/^HR-\\d+$/); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/refills/{{budgetRefillId}}/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "refills",
+                "{{budgetRefillId}}",
+                "approve"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"adminId\": \"oslo-admin\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "D10. Budget used up: the next refill waits for approval before anyone buys",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 201\", () => pm.response.to.have.status(201));",
+                  "const body = pm.response.text() ? pm.response.json() : {};",
+                  "pm.test(\"status is AWAITING_BUDGET_APPROVAL\", () => { pm.expect(body.status).to.eql(\"AWAITING_BUDGET_APPROVAL\"); });",
+                  "if (body.id !== undefined && body.id !== null) pm.collectionVariables.set(\"approvalRefillId\", body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/refills/empty",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "refills",
+                "empty"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"office\": \"OSLO\",\n  \"reportedBy\": \"E101\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "D11. The Bengaluru admin can't approve an Oslo refill (403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 403\", () => pm.response.to.have.status(403));",
+                  "const body = pm.response.text() ? pm.response.json() : {};",
+                  "pm.test(\"Wrong office's admin\", () => { pm.expect(body.detail).to.eql('blr-admin is not a snack admin for OSLO'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/refills/{{approvalRefillId}}/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "refills",
+                "{{approvalRefillId}}",
+                "approve"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"adminId\": \"blr-admin\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "D12. The Oslo admin approves: a volunteer is asked",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.text() ? pm.response.json() : {};",
+                  "pm.test(\"status is OFFERED\", () => { pm.expect(body.status).to.eql(\"OFFERED\"); });",
+                  "pm.test(\"Someone is asked\", () => { pm.expect(body.assignee).to.be.a('string'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/refills/{{approvalRefillId}}/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "refills",
+                "{{approvalRefillId}}",
+                "approve"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"adminId\": \"oslo-admin\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "E. HR rejects a claim (Bengaluru)",
+      "description": "A rejected receipt no longer counts against the budget.",
+      "item": [
+        {
+          "name": "E1. Bengaluru box empty again",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 201\", () => pm.response.to.have.status(201));",
+                  "const body = pm.response.text() ? pm.response.json() : {};",
+                  "pm.test(\"status is OFFERED\", () => { pm.expect(body.status).to.eql(\"OFFERED\"); });",
+                  "pm.test(\"assignee is E200\", () => { pm.expect(body.assignee).to.eql(\"E200\"); });",
+                  "if (body.id !== undefined && body.id !== null) pm.collectionVariables.set(\"rejectRefillId\", body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/refills/empty",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "refills",
+                "empty"
+              ]
+            },
+            "description": "Arjun did the last refill and is still owed money, so Priya is asked.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"office\": \"BENGALURU\",\n  \"reportedBy\": \"E201\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "E2. Priya commits",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.text() ? pm.response.json() : {};",
+                  "pm.test(\"status is COMMITTED\", () => { pm.expect(body.status).to.eql(\"COMMITTED\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/refills/{{rejectRefillId}}/commit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "refills",
+                "{{rejectRefillId}}",
+                "commit"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeId\": \"E200\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "E3. Priya uploads an 800 INR receipt",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.text() ? pm.response.json() : {};",
+                  "pm.test(\"status is CLAIM_SUBMITTED\", () => { pm.expect(body.status).to.eql(\"CLAIM_SUBMITTED\"); });",
+                  "if (body.claimId !== undefined && body.claimId !== null) pm.collectionVariables.set(\"rejectClaimId\", body.claimId);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/refills/{{rejectRefillId}}/receipt",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "refills",
+                "{{rejectRefillId}}",
+                "receipt"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeId\": \"E200\",\n  \"amount\": 800,\n  \"currency\": \"INR\",\n  \"items\": [\n    \"juice\"\n  ],\n  \"receiptImageBase64\": \"AQID\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "E4. HR rejects Priya's claim",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.text() ? pm.response.json() : {};"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/sim/hr/claims/{{rejectClaimId}}/reject",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "sim",
+                "hr",
+                "claims",
+                "{{rejectClaimId}}",
+                "reject"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "E5. HR approves Arjun's claim",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.text() ? pm.response.json() : {};"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/sim/hr/claims/{{blrClaimId}}/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "sim",
+                "hr",
+                "claims",
+                "{{blrClaimId}}",
+                "approve"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "E6. Run the scheduled checks now (tick)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.text() ? pm.response.json() : {};"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/sim/tick",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "sim",
+                "tick"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "E7. Priya's refill: claim rejected",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.text() ? pm.response.json() : {};",
+                  "pm.test(\"status is CLAIM_REJECTED\", () => { pm.expect(body.status).to.eql(\"CLAIM_REJECTED\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/refills/{{rejectRefillId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "refills",
+                "{{rejectRefillId}}"
+              ]
+            },
+            "description": "Priya is told why and who to contact; the 800 INR leaves the budget."
+          }
+        },
+        {
+          "name": "E8. Arjun's refill: reimbursed",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.text() ? pm.response.json() : {};",
+                  "pm.test(\"status is REIMBURSED\", () => { pm.expect(body.status).to.eql(\"REIMBURSED\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/refills/{{blrRefillId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "refills",
+                "{{blrRefillId}}"
+              ]
+            },
+            "description": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "F. Monthly report: both offices, one total in NOK",
+      "description": "Simulated rate: 1 INR = 0.12 NOK. On a fresh run: Oslo 6 150 NOK, Bengaluru 2 500 INR (300 NOK), total 6 450 NOK.",
+      "item": [
+        {
+          "name": "F1. Monthly report (current month)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.text() ? pm.response.json() : {};",
+                  "pm.test(\"Both offices, each in its own currency\", () => { const c = Object.fromEntries(body.offices.map(o => [o.office, o.spent.currency])); pm.expect(c).to.eql({OSLO: 'NOK', BENGALURU: 'INR'}); });",
+                  "pm.test(\"Total is in NOK\", () => { pm.expect(body.totalSpent.currency).to.eql('NOK'); });",
+                  "pm.test(\"Total = sum of both offices in NOK\", () => { const sum = body.offices.reduce((s, o) => s + o.spentInReportCurrency.amount, 0); pm.expect(body.totalSpent.amount).to.be.closeTo(sum, 0.001); });",
+                  "pm.test(\"Fresh run: Oslo 6150 NOK, Bengaluru 2500 INR, total 6450 NOK\", () => { const o = Object.fromEntries(body.offices.map(x => [x.office, x.spent.amount])); pm.expect([o.OSLO, o.BENGALURU, body.totalSpent.amount]).to.eql([6150, 2500, 6450]); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/reports/monthly",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "reports",
+                "monthly"
+              ]
+            },
+            "description": "Also shows budget left per office, money still owed to volunteers, and the top items."
+          }
+        },
+        {
+          "name": "F2. Monthly report for a given month",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.text() ? pm.response.json() : {};",
+                  "pm.test(\"Month as asked\", () => { pm.expect(body.month).to.eql('2026-11'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/reports/monthly?month=2026-11",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "reports",
+                "monthly"
+              ],
+              "query": [
+                {
+                  "key": "month",
+                  "value": "2026-11"
+                }
+              ]
+            },
+            "description": "?month=yyyy-MM. Defaults to the current month."
+          }
+        }
+      ]
+    },
+    {
+      "name": "G. Explore and errors",
+      "description": "Look around, and see that errors explain themselves.",
+      "item": [
+        {
+          "name": "G1. All refills, both offices",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.text() ? pm.response.json() : {};",
+                  "pm.test(\"Has refills\", () => { pm.expect(body.length).to.be.above(0); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/refills",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "refills"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "G2. One refill's full history (Bengaluru)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.text() ? pm.response.json() : {};",
+                  "pm.test(\"History tells the story\", () => { pm.expect(body.history.map(e => e.text).join(' | ')).to.include('handed off'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/refills/{{blrRefillId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "refills",
+                "{{blrRefillId}}"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "G3. Every chat message the system sent",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.text() ? pm.response.json() : {};",
+                  "pm.test(\"Both offices' channels were used\", () => { const to = body.map(m => m.to); pm.expect(to).to.include('#snacks-oslo'); pm.expect(to).to.include('#snacks-bengaluru'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/sim/chat",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "sim",
+                "chat"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "G4. Every claim HR received",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.text() ? pm.response.json() : {};",
+                  "pm.test(\"In order HR-1, HR-2, ...\", () => { const n = body.map(c => Number(c.claimId.slice(3))); pm.expect(n).to.eql([...n].sort((a, b) => a - b)); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/sim/hr/claims",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "sim",
+                "hr",
+                "claims"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "G5. Mark Meera away (back home)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 204\", () => pm.response.to.have.status(204));",
+                  "const body = pm.response.text() ? pm.response.json() : {};"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/presence/E202",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "presence",
+                "E202"
+              ]
+            },
+            "description": "office null = away (home, holiday, sick): she won't be asked to buy today.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"office\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "G6. Unknown refill (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 404\", () => pm.response.to.have.status(404));",
+                  "const body = pm.response.text() ? pm.response.json() : {};",
+                  "pm.test(\"Says which refill\", () => { pm.expect(body.detail).to.eql('No refill #999999'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/refills/999999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "refills",
+                "999999"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "G7. Receipt without an image (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 400\", () => pm.response.to.have.status(400));",
+                  "const body = pm.response.text() ? pm.response.json() : {};",
+                  "pm.test(\"Names the missing field\", () => { pm.expect(body.detail).to.eql('receiptImageBase64 must not be blank'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/refills/{{approvalRefillId}}/receipt",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "refills",
+                "{{approvalRefillId}}",
+                "receipt"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeId\": \"E101\",\n  \"amount\": 500,\n  \"currency\": \"NOK\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "G8. An office that doesn't exist (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 400\", () => pm.response.to.have.status(400));",
+                  "const body = pm.response.text() ? pm.response.json() : {};",
+                  "pm.test(\"Lists the real offices\", () => { pm.expect(body.detail).to.include('OSLO or BENGALURU'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/refills/empty",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "refills",
+                "empty"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"office\": \"PARIS\",\n  \"reportedBy\": \"E100\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "G9. Unknown volunteer checks in (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 400\", () => pm.response.to.have.status(400));",
+                  "const body = pm.response.text() ? pm.response.json() : {};",
+                  "pm.test(\"Not a volunteer\", () => { pm.expect(body.detail).to.include('not a registered volunteer'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/presence/E999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "presence",
+                "E999"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"office\": \"OSLO\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "G10. Sofie, working from home, tries to commit to the Oslo refill (403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 403\", () => pm.response.to.have.status(403));",
+                  "const body = pm.response.text() ? pm.response.json() : {};",
+                  "pm.test(\"Only people at the office can buy\", () => { pm.expect(body.detail).to.include('Sofie is not checked in at OSLO today'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/refills/{{approvalRefillId}}/commit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "refills",
+                "{{approvalRefillId}}",
+                "commit"
+              ]
+            },
+            "description": "Only people checked in at that office today can commit, so nobody at home is sent to the shop.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeId\": \"E102\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "G11. OpenAPI spec (what Swagger UI shows)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.text() ? pm.response.json() : {};",
+                  "pm.test(\"Title\", () => { pm.expect(body.info.title).to.eql('Snack Counter Automation API'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v3/api-docs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v3",
+                "api-docs"
+              ]
+            },
+            "description": "Swagger UI: {{baseUrl}}/swagger-ui.html"
+          }
+        }
+      ]
+    }
+  ]
+}

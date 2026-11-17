@@ -1,0 +1,57 @@
+server:
+  port: 8085   # not 8080: that one is often taken locally (e.g. by Teams)
+
+logging:
+  level:
+    com.snackcounter: INFO      # DEBUG adds the fairness ranking, check-ins and scheduler ticks
+  pattern:
+    # time, level, thread (matters: requests race for the same refill), class, message
+    console: "%d{HH:mm:ss.SSS} %clr(%5p) [%15.15t] %clr(%-22.22logger{0}){cyan} : %m%n%wEx"
+
+springdoc:
+  api-docs:
+    enabled: true                   # on for the demo; set false in production
+  swagger-ui:
+    enabled: true                   # on for the demo; set false in production
+    path: /swagger-ui.html
+    tags-sorter: alpha              # tags are numbered in demo order: 1. Presence ... 4. Reports
+    try-it-out-enabled: true
+    display-request-duration: true
+
+snack:
+  # How long a volunteer has before the refill moves on to the next person.
+  accept-timeout: PT2H        # to say "I'll do it" after being asked
+  purchase-timeout: P1D       # to upload the receipt after committing
+  # Fairness window: refills done in the last N days count against you.
+  fairness-window: P90D
+  escalation-interval-ms: 60000
+
+  offices:
+    OSLO:
+      currency: NOK
+      monthly-budget: 6000
+      typical-min: 300
+      typical-max: 1200
+      admins: [oslo-admin]
+    BENGALURU:
+      currency: INR
+      monthly-budget: 15000
+      typical-min: 500
+      typical-max: 3000
+      admins: [blr-admin]
+
+  report:
+    currency: NOK
+    # Simulated fixed rates: 1 unit of the key currency = N units of the report currency.
+    rates:
+      NOK: 1
+      INR: 0.12
+
+  # Demo data so the API is usable right after start-up (simulated company directory).
+  volunteers:
+    - { employee-id: E100, name: Ingrid, home-office: OSLO }
+    - { employee-id: E101, name: Lars,   home-office: OSLO }
+    - { employee-id: E102, name: Sofie,  home-office: OSLO }
+    - { employee-id: E200, name: Priya,  home-office: BENGALURU }
+    - { employee-id: E201, name: Arjun,  home-office: BENGALURU }
+    - { employee-id: E202, name: Meera,  home-office: BENGALURU }

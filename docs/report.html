@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Snack Counter Automation: How It Works</title>
+<!-- Both libraries are saved locally, so this report works offline. -->
+<script src="assets/tailwind.js"></script>
+<script src="assets/mermaid.min.js"></script>
+<style type="text/tailwindcss">
+  @theme { --color-brand: #0053e2; --color-brand-dark: #002d7a; --color-spark: #ffc220; }
+  h2 { @apply text-2xl font-bold text-brand-dark mt-2 mb-4 scroll-mt-6; }
+  h3 { @apply text-lg font-semibold text-slate-800 mt-6 mb-2; }
+  section { @apply bg-white rounded-2xl shadow-sm ring-1 ring-slate-200 p-6 md:p-8 mb-8; }
+  .diagram { @apply bg-slate-50 rounded-xl ring-1 ring-slate-200 p-4 my-4 overflow-x-auto; }
+  .caption { @apply text-sm text-slate-600 mt-2; }
+  table { @apply w-full text-sm border-collapse; }
+  th { @apply text-left bg-slate-100 text-slate-700 font-semibold px-3 py-2 border-b border-slate-300; }
+  td { @apply px-3 py-2 border-b border-slate-200 align-top; }
+  code { @apply bg-slate-100 text-slate-800 rounded px-1 py-0.5 text-[0.85em]; }
+  .chip { @apply inline-block whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-semibold; }
+  .insight { @apply rounded-xl p-4 ring-1; }
+  a:focus-visible, button:focus-visible, input:focus-visible { @apply outline-3 outline-offset-2 outline-brand; }
+</style>
+</head>
+<body class="bg-slate-100 text-slate-900 leading-relaxed">
+<a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 bg-white p-2 rounded">Skip to content</a>
+
+<header class="bg-brand text-white">
+  <div class="max-w-6xl mx-auto px-6 py-10">
+    <p class="text-spark font-semibold tracking-wide uppercase text-sm">Design and implementation report</p>
+    <h1 class="text-4xl font-extrabold mt-1">Snack Counter Automation</h1>
+    <p class="mt-3 max-w-3xl text-blue-50">Oslo and Bengaluru snack counters: who refills, how only one person buys, how budgets
+      are kept in two currencies, and how volunteers get their money back. Java 21 · Spring Boot 3.5 · simulated chat tool and HR system.</p>
+    <dl class="grid grid-cols-2 md:grid-cols-5 gap-3 mt-8">
+      <div class="bg-white/10 rounded-xl p-3"><dt class="text-xs text-blue-100">Automated tests</dt><dd class="text-2xl font-bold">120 passing</dd></div>
+      <div class="bg-white/10 rounded-xl p-3"><dt class="text-xs text-blue-100">Refill states</dt><dd class="text-2xl font-bold">10</dd></div>
+      <div class="bg-white/10 rounded-xl p-3"><dt class="text-xs text-blue-100">Cases covered, each tested</dt><dd id="case-total" class="text-2xl font-bold">52</dd></div>
+      <div class="bg-white/10 rounded-xl p-3"><dt class="text-xs text-blue-100">Offices / currencies</dt><dd class="text-2xl font-bold">2 / 2</dd></div>
+      <div class="bg-white/10 rounded-xl p-3"><dt class="text-xs text-blue-100">Production code changes for real chat/HR</dt><dd class="text-2xl font-bold">1 adapter each</dd></div>
+    </dl>
+  </div>
+</header>
+
+<div class="max-w-6xl mx-auto px-6 py-8 lg:grid lg:grid-cols-[220px_1fr] lg:gap-8">
+<nav aria-label="Sections" class="hidden lg:block">
+  <ol class="sticky top-6 space-y-1 text-sm">
+    <li><a class="block px-3 py-1.5 rounded hover:bg-white" href="#insights">Key takeaways</a></li>
+    <li><a class="block px-3 py-1.5 rounded hover:bg-white" href="#problem">1. Problem statement</a></li>
+    <li><a class="block px-3 py-1.5 rounded hover:bg-white" href="#approach">2. What "automate" means</a></li>
+    <li><a class="block px-3 py-1.5 rounded hover:bg-white" href="#architecture">3. Architecture</a></li>
+    <li><a class="block px-3 py-1.5 rounded hover:bg-white" href="#flow">4. End-to-end flow</a></li>
+    <li><a class="block px-3 py-1.5 rounded hover:bg-white" href="#states">5. Refill state machine</a></li>
+    <li><a class="block px-3 py-1.5 rounded hover:bg-white" href="#who">6. Choosing who buys</a></li>
+    <li><a class="block px-3 py-1.5 rounded hover:bg-white" href="#budget">7. Budget check</a></li>
+    <li><a class="block px-3 py-1.5 rounded hover:bg-white" href="#handover">8. Deadlines and handover</a></li>
+    <li><a class="block px-3 py-1.5 rounded hover:bg-white" href="#concurrency">9. Only one buyer</a></li>
+    <li><a class="block px-3 py-1.5 rounded hover:bg-white" href="#money">10. Two currencies and the report</a></li>
+    <li><a class="block px-3 py-1.5 rounded hover:bg-white" href="#mapping">11. Problem to solution</a></li>
+    <li><a class="block px-3 py-1.5 rounded hover:bg-white" href="#cases">12. Every case handled</a></li>
+    <li><a class="block px-3 py-1.5 rounded hover:bg-white" href="#data">13. Parts and data</a></li>
+    <li><a class="block px-3 py-1.5 rounded hover:bg-white" href="#tradeoffs">14. Trade-offs and not built</a></li>
+    <li><a class="block px-3 py-1.5 rounded hover:bg-white" href="#summary">Summary</a></li>
+  </ol>
+</nav>
+
+<main id="main">
+<section id="insights" aria-labelledby="insights-h">
+  <h2 id="insights-h">Key takeaways</h2>
+  <div class="grid md:grid-cols-2 gap-4">
+    <div class="insight bg-blue-50 ring-blue-200"><p class="font-semibold text-brand-dark">A named person, a deadline, and a fallback</p><p class="text-sm mt-1">Each empty box gets one person who is asked by name and has 2 hours to say yes. A refill nobody completes moves on automatically, and finally becomes an open call in the office channel.</p></div>
+    <div class="insight bg-green-50 ring-green-200"><p class="font-semibold text-green-900">Exactly one buyer, guaranteed</p><p class="text-sm mt-1">One open refill per office, and one commit per refill under a lock. The rule is tested with 8 threads racing, 20 times over. Removing the lock fails all 20. All 73 test methods (120 runs, including repeats and one layering check per layer) pass.</p></div>
+    <div class="insight bg-amber-50 ring-amber-200"><p class="font-semibold text-amber-900">Fair, and money moves fast</p><p class="text-sm mt-1">Whoever did the fewest recent refills and is owed the least goes first. The HR claim is filed the moment the receipt arrives and retried if HR is down.</p></div>
+    <div class="insight bg-purple-50 ring-purple-200"><p class="font-semibold text-purple-900">Budgets in each office's own currency, one total for management</p><p class="text-sm mt-1">6 000 NOK and 15 000 INR are checked in their own currencies, by each office's local calendar. Exchange rates are only used for the combined monthly total.</p></div>
+  </div>
+</section>
+
+<section id="problem" aria-labelledby="problem-h">
+  <h2 id="problem-h">1. Problem statement</h2>
+  <p>Two offices, each with a snack counter kept stocked by volunteers: <strong>about 15 in Oslo</strong> and <strong>about 20 in Bengaluru</strong>.
+    When a box is empty, a volunteer buys snacks with their own money and submits the receipt to the company's HR system to be reimbursed. This runs on goodwill and informal messages, and it is breaking down:</p>
+  <div class="diagram" role="img" aria-label="Today's informal process: the box goes empty; it either stays empty for days, gets bought twice, or the same few people pay and wait weeks; nobody knows the spend.">
+<pre class="mermaid">
+flowchart TD
+  E([Box goes empty]) --> W{Who refills?}
+  W -->|everyone assumes someone else will| D[Box sits empty for days]
+  W -->|two people act on the same day| T[Snacks bought twice]
+  W -->|the usual few step up again| F[Same volunteers pay again]
+  T --> H[Receipt sent to HR by hand]
+  F --> H --> L[Weeks until reimbursed]
+  D -.-> X[No data: monthly spend? what gets eaten?]
+  classDef bad fill:#fde8e8,stroke:#c81e1e,color:#7f1d1d
+  class D,T,F,L,X bad
+</pre>
+  </div>
+  <div class="grid md:grid-cols-2 gap-6">
+    <div>
+      <h3>What we know</h3>
+      <ul class="list-disc pl-5 space-y-1 text-sm">
+        <li>HR is run by another company. Claims carry <strong>amount, currency, description, receipt image, employee id</strong>. Approval takes <strong>1 to 10 days</strong>, and employees are paid in their <strong>payroll currency</strong>.</li>
+        <li>Management wants <strong>one monthly report</strong> of total spend across both offices.</li>
+        <li>Employees sometimes <strong>visit the other office</strong> for a week or two.</li>
+        <li>Volunteers work <strong>hybrid</strong>: some days in the office, some at home, sometimes on holiday.</li>
+        <li>Everyone has a <strong>company login</strong> and uses the <strong>internal chat tool</strong>.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Monthly budgets</h3>
+      <table><caption class="sr-only">Office budgets</caption>
+        <thead><tr><th scope="col">Office</th><th scope="col">Monthly budget</th><th scope="col">Typical purchase</th><th scope="col">Time zone</th></tr></thead>
+        <tbody>
+          <tr><td>Oslo</td><td>6 000 NOK</td><td>300 – 1 200 NOK</td><td>Europe/Oslo</td></tr>
+          <tr><td>Bengaluru</td><td>15 000 INR</td><td>500 – 3 000 INR</td><td>Asia/Kolkata</td></tr>
+        </tbody>
+      </table>
+      <h3>Deliverables asked for</h3>
+      <ol class="list-decimal pl-5 text-sm space-y-1"><li>A short design document</li><li>Working core logic (refill lifecycle, choosing who buys, budget check) with simulated chat and HR</li><li>Automated tests that prove the important rules</li></ol>
+    </div>
+  </div>
+</section>
+
+<section id="approach" aria-labelledby="approach-h">
+  <h2 id="approach-h">2. What "automate" means here</h2>
+  <p>The coordination and the paperwork are automated, not the shopping. A person still buys the snacks, but the system decides
+    <strong>who</strong>, makes sure <strong>only one person</strong> buys, checks the <strong>budget</strong>, files the <strong>HR claim</strong> and builds the <strong>report</strong>.
+    The <strong>chat tool is the user interface</strong>, because everyone already has it.</p>
+  <h3>Questions asked before building, and the answers</h3>
+  <table><thead><tr><th scope="col">Question</th><th scope="col">Decision</th></tr></thead><tbody>
+    <tr><td>How do we pick who buys?</td><td>Fairness order among volunteers <em>present at that office today</em></td></tr>
+    <tr><td>How long before a refill moves on?</td><td>2 hours to commit, 1 day to upload the receipt (configurable)</td></tr>
+    <tr><td>What happens when a purchase exceeds the budget?</td><td>Not a hard stop: the office admin approves</td></tr>
+    <tr><td>Which currency is the combined report in?</td><td>Each office in its own currency, plus a combined total in NOK</td></tr>
+    <tr><td>Can visitors refill the office they are visiting?</td><td>Yes: that office's budget and currency, and HR pays them in their payroll currency</td></tr>
+    <tr><td>What shape should the code take?</td><td>Spring Boot REST API, in memory, simulated chat and HR behind interfaces</td></tr>
+  </tbody></table>
+</section>
+
+<section id="architecture" aria-labelledby="architecture-h">
+  <h2 id="architecture-h">3. Architecture</h2>
+  <div class="diagram" role="img" aria-label="Architecture: people use the chat tool, which calls the REST API. RefillService runs the lifecycle using VolunteerSelector, BudgetService and the RefillRepository. A scheduler drives deadlines and HR sync. The report service reads budgets and exchange rates.">
+<pre class="mermaid">
+flowchart TB
+  P["`**People**
+  employees and volunteers, office admins, management`"]
+  CH["`**Chat tool** (simulated)
+  empty, commit, receipt, check-in, approve`"]
+  C["`**Controller layer**: HTTP and DTOs only
+  RefillController, PresenceController,
+  ReportController, SimulationController`"]
+  S["`**Service layer**: every business rule
+  RefillService, VolunteerSelector, BudgetService,
+  PresenceService, MonthlyReportService`"]
+  SCH["`**RefillScheduler**
+  every minute`"]
+  R[("`**Repository layer**: storage only
+  RefillRepository, VolunteerRepository,
+  PresenceRepository`")]
+  X["`**Client layer**: outside systems
+  ChatTool, HrSystem`"]
+  M["`**Model**: used by every layer, uses none
+  Refill, RefillStatus, Receipt, Money, Office, Volunteer`"]
+  P --> CH --> C
+  C -->|DTOs in, DTOs out| S
+  SCH --> S
+  S --> R
+  S --> X
+  X -.->|messages| CH
+  R ~~~ M
+  classDef ctrl fill:#e0e7ff,stroke:#4338ca,color:#1e1b4b
+  classDef svc fill:#dcfce7,stroke:#15803d,color:#14532d
+  classDef repo fill:#fef3c7,stroke:#b45309,color:#78350f
+  classDef ext fill:#fce7f3,stroke:#be185d,color:#831843
+  classDef model fill:#f1f5f9,stroke:#475569,color:#0f172a
+  class C ctrl
+  class S,SCH svc
+  class R repo
+  class X,CH ext
+  class M model
+</pre>
+  </div>
+  <p class="caption">Layered <strong>controller → service → repository</strong>. A request walks down: <code>POST /api/refills/7/commit</code> → <code>RefillController</code> → <code>RefillService.commit</code> (locks, rules) → <code>RefillRepository</code> and <code>Refill.commit</code> → <code>ChatTool</code> messages → <code>RefillResponse</code>. Chat and HR sit behind the <code>ChatTool</code> and <code>HrSystem</code> interfaces, so going live means one real adapter each. <code>LayeringTest</code> fails the build if a layer imports one it shouldn't.</p>
+</section>
+
+<section id="flow" aria-labelledby="flow-h">
+  <h2 id="flow-h">4. End-to-end flow: from "empty" to "reimbursed"</h2>
+  <div class="diagram" role="img" aria-label="Sequence: someone reports the box empty; the system checks for an open refill and the budget, picks the fairest present volunteer and messages them; she commits; the channel is told not to buy; she uploads a receipt; the claim goes to HR; the system polls HR until it is approved and tells her.">
+<pre class="mermaid">
+sequenceDiagram
+  autonumber
+  actor R as Reporter (anyone)
+  participant S as Snack system
+  actor V as Ingrid (volunteer)
+  participant C as Oslo snack channel
+  participant H as HR system
+  R->>S: The Oslo box is empty
+  Note over S: Already an open refill for Oslo? Join it.<br/>Budget left at least 300 NOK? Otherwise ask the admin.
+  S->>S: Pick the fairest volunteer at Oslo today
+  S->>V: Can you refill today? Commit within 2 h. Spend up to 1 200 NOK.
+  V->>S: commit
+  S->>C: Ingrid is refilling. Please don't buy snacks today.
+  V->>S: Receipt: 450 NOK, photo, items (within 1 day)
+  Note over S: Right currency? Within the spending limit?
+  S->>H: Claim: 450 NOK, description, image, employee id
+  S->>V: Your claim HR-1 is with HR (1 to 10 days)
+  S->>C: The box was refilled by Ingrid. Thank you!
+  loop every minute
+    S->>H: Status of HR-1?
+  end
+  H-->>S: APPROVED
+  S->>V: HR approved. The money is on its way.
+</pre>
+  </div>
+</section>
+
+<section id="states" aria-labelledby="states-h">
+  <h2 id="states-h">5. Refill state machine</h2>
+  <p>Every refill is in exactly one of 10 states. Each transition is guarded in the <code>Refill</code> entity, so an illegal jump throws an error instead of corrupting the data.</p>
+  <div class="diagram" role="img" aria-label="State machine with states Reported, Awaiting budget approval, Offered, Needs volunteer, Committed, Awaiting admin approval, Ready to claim, Claim submitted, Reimbursed and Claim rejected.">
+<pre class="mermaid">
+stateDiagram-v2
+  [*] --> REPORTED: box reported empty
+  REPORTED --> AWAITING_BUDGET_APPROVAL: budget left below typical minimum
+  REPORTED --> OFFERED: someone present to ask
+  REPORTED --> NEEDS_VOLUNTEER: nobody present
+  AWAITING_BUDGET_APPROVAL --> OFFERED: admin approves
+  OFFERED --> COMMITTED: commit (asked person, or someone at that office stepping in)
+  OFFERED --> OFFERED: 2 h passed or declined, ask next person
+  OFFERED --> NEEDS_VOLUNTEER: nobody left to ask
+  NEEDS_VOLUNTEER --> COMMITTED: anyone at the office commits
+  COMMITTED --> OFFERED: no receipt in 1 day or declined
+  COMMITTED --> READY_TO_CLAIM: receipt within budget
+  COMMITTED --> AWAITING_ADMIN_APPROVAL: receipt above the spending limit
+  AWAITING_ADMIN_APPROVAL --> READY_TO_CLAIM: admin approves
+  READY_TO_CLAIM --> CLAIM_SUBMITTED: HR accepts the claim
+  READY_TO_CLAIM --> READY_TO_CLAIM: HR down, retry every minute
+  CLAIM_SUBMITTED --> REIMBURSED: HR approves
+  CLAIM_SUBMITTED --> CLAIM_REJECTED: HR rejects, admin follows up
+  REIMBURSED --> [*]
+  CLAIM_REJECTED --> [*]
+</pre>
+  </div>
+  <div class="grid md:grid-cols-3 gap-3 text-sm">
+    <div class="rounded-lg bg-red-50 p-3 ring-1 ring-red-200"><strong>Box still empty</strong><br>REPORTED, AWAITING_BUDGET_APPROVAL, OFFERED, NEEDS_VOLUNTEER, COMMITTED. A new "empty" report joins this refill.</div>
+    <div class="rounded-lg bg-amber-50 p-3 ring-1 ring-amber-200"><strong>Volunteer still owed money</strong><br>AWAITING_ADMIN_APPROVAL, READY_TO_CLAIM, CLAIM_SUBMITTED. This pushes them down the "who buys" order.</div>
+    <div class="rounded-lg bg-green-50 p-3 ring-1 ring-green-200"><strong>Counts against the budget</strong><br>Every state with a receipt except CLAIM_REJECTED.</div>
+  </div>
+</section>
+
+<section id="who" aria-labelledby="who-h">
+  <h2 id="who-h">6. Choosing who buys</h2>
+  <div class="diagram" role="img" aria-label="Selection flow: from all volunteers keep those checked in at this office today, not already handed off, and not busy with the other office's refill; sort by fairness; offer to the first, or open the refill to anyone if no one is left.">
+<pre class="mermaid">
+flowchart TD
+  A[Refill needs a buyer] --> B[All registered volunteers]
+  B --> C{At this office today?}
+  C -->|no: home, holiday, other office| X1[Skip]
+  C -->|yes, including visitors| D{Handed off already?}
+  D -->|yes, for this refill| X2[Skip]
+  D -->|no| E{Busy at the other office?}
+  E -->|yes, assigned there| X3[Skip]
+  E -->|no| F[Candidates]
+  F --> G["Sort: 1. fewest refills in last 90 days, 2. fewest claims still unpaid, 3. longest since last refill, 4. employee id"]
+  G --> H{Anyone left?}
+  H -->|yes| I[Offer to first: message, 2 h deadline, spending cap]
+  H -->|no| J[NEEDS_VOLUNTEER: open call in the office channel]
+  classDef skip fill:#f1f5f9,stroke:#94a3b8,color:#334155
+  class X1,X2,X3 skip
+</pre>
+  </div>
+  <p class="caption">Presence (where someone is today, not their home office) handles hybrid work, holidays and visitors. "Today" uses the office's local time.</p>
+</section>
+
+<section id="budget" aria-labelledby="budget-h">
+  <h2 id="budget-h">7. Budget check: two checkpoints</h2>
+  <div class="grid md:grid-cols-2 gap-4">
+  <figure class="diagram" role="img" aria-label="Checkpoint one, when the box is reported empty: if enough budget is left, offer with a spending cap; otherwise wait for an admin to approve.">
+    <figcaption class="font-semibold text-slate-800 mb-2">Checkpoint 1: the box is reported empty</figcaption>
+<pre class="mermaid">
+flowchart TD
+  A1[Box reported empty] --> A2["Remaining = budget - spent this month, in the office currency and local month"]
+  A2 --> A3{Enough left?}
+  A3 -->|"yes: at least 300 NOK / 500 INR"| A4["Offer with cap = min(remaining, typical max)"]
+  A3 -->|no| A5[AWAITING_BUDGET_APPROVAL, admin messaged]
+  A5 -->|admin approves| A4
+</pre>
+  </figure>
+  <figure class="diagram" role="img" aria-label="Checkpoint two, when the receipt is uploaded: invalid receipts are refused; within the spending limit goes to HR at once; above it waits for an admin first.">
+    <figcaption class="font-semibold text-slate-800 mb-2">Checkpoint 2: the receipt is uploaded</figcaption>
+<pre class="mermaid">
+flowchart TD
+  B0[Receipt uploaded] --> B1{Valid?}
+  B1 -->|"no: wrong or unknown currency, no or bad image, future date or before the box was reported empty, zero"| BX[Refused: 400, refill unchanged]
+  B1 -->|yes| B2{Within the spending limit?}
+  B2 -->|"yes: at most what the volunteer was told: what is left, capped at a normal large purchase"| B3[Claim filed with HR immediately]
+  B2 -->|no| B4[AWAITING_ADMIN_APPROVAL]
+  B4 -->|admin approves| B3
+</pre>
+  </figure>
+  </div>
+  <p class="caption">Only the office's admins can approve; another office's admin gets 403. An exchange rate never decides whether snacks can be bought.</p>
+</section>
+
+<section id="handover" aria-labelledby="handover-h">
+  <h2 id="handover-h">8. Deadlines and handover</h2>
+  <div class="diagram" role="img" aria-label="Every minute the scheduler checks offered and committed refills; when a deadline has passed, the person is handed off and told, and the next person is asked, or the refill is opened to anyone.">
+<pre class="mermaid">
+flowchart TD
+  S[Scheduler, every minute] --> L[Each OFFERED or COMMITTED refill]
+  L --> D{Deadline passed?}
+  D -->|no| K[Leave it]
+  D -->|yes| H[Hand off the assignee: added to the handed-off list]
+  H --> M{Had they committed?}
+  M -->|yes| M1["Message: handed to someone else. Please don't buy."]
+  M -->|no| M2[Message: offered to someone else]
+  M1 & M2 --> N{Next candidate?}
+  N -->|found, excluding handed-off people| O[OFFERED to them, new 2 h deadline]
+  N -->|none| P[NEEDS_VOLUNTEER: anyone may commit, even earlier people]
+  DEC[Volunteer declines] --> H
+</pre>
+  </div>
+  <p class="caption">Running the check twice doesn't skip anyone: each refill is re-checked under its lock. A person who was handed off can't take the refill back while someone else is being asked, but can once it's open to everyone.</p>
+</section>
+
+<section id="concurrency" aria-labelledby="concurrency-h">
+  <h2 id="concurrency-h">9. Only one buyer: concurrency</h2>
+  <div class="diagram" role="img" aria-label="Ingrid and Lars commit at the same moment; the refill lock lets one through; Ingrid succeeds and Lars gets a 409 conflict naming Ingrid.">
+<pre class="mermaid">
+sequenceDiagram
+  actor I as Ingrid
+  actor L as Lars
+  participant R as Refill 7 (lock per refill)
+  par same moment
+    I->>R: commit
+  and
+    L->>R: commit
+  end
+  Note over R: Only one thread holds the refill lock at a time
+  R-->>I: OK, OFFERED becomes COMMITTED
+  R-->>L: 409 Conflict: already being bought by Ingrid
+  Note over R: Second safety net: the entity refuses COMMITTED to COMMITTED
+</pre>
+  </div>
+  <div class="grid md:grid-cols-3 gap-3 text-sm">
+    <div class="rounded-lg bg-slate-50 p-3 ring-1 ring-slate-200"><strong>Office lock</strong>: two "empty" reports at once still create a single refill (tested with 6 threads, 20 times).</div>
+    <div class="rounded-lg bg-slate-50 p-3 ring-1 ring-slate-200"><strong>Refill lock</strong>: check and act happen atomically, and the first commit wins (tested with 8 threads, 20 times).</div>
+    <div class="rounded-lg bg-slate-50 p-3 ring-1 ring-slate-200"><strong>Mutation check</strong>: with the lock removed, the test failed all 20 runs. Locks are always taken office first, then refill, so they can't deadlock.</div>
+  </div>
+</section>
+
+<section id="money" aria-labelledby="money-h">
+  <h2 id="money-h">10. Two currencies and the monthly report</h2>
+  <div class="diagram" role="img" aria-label="Report flow: keep refills with a receipt that HR did not reject, purchased in the report month; total per office in its own currency; convert each receipt at the rate for its purchase date; add up to a NOK total.">
+<pre class="mermaid">
+flowchart TD
+  A[All refills] --> B{Receipt counts?}
+  B -->|"yes: has a receipt and HR did not reject it"| C{In the report month?}
+  B -->|no| Z[Left out]
+  C -->|"yes: purchase date, office local calendar"| D[Office total in its own currency]
+  C -->|no| Z
+  D --> G[Remaining = budget - spent]
+  D --> E[Each receipt at the rate for its purchase date]
+  E --> F[Combined total in NOK]
+</pre>
+  </div>
+  <h3>Worked example (from <code>MonthlyReportTest</code>, rate 1 INR = 0.12 NOK)</h3>
+  <table><thead><tr><th scope="col">Office</th><th scope="col">Receipts</th><th scope="col">Spent (own currency)</th><th scope="col">Remaining</th><th scope="col">In NOK</th></tr></thead><tbody>
+    <tr><td>Oslo</td><td>450 + 750 NOK</td><td>1 200.00 NOK</td><td>4 800.00 NOK</td><td>1 200.00 NOK</td></tr>
+    <tr><td>Bengaluru</td><td>2 500 + 1 000 INR</td><td>3 500.00 INR</td><td>11 500.00 INR</td><td>420.00 NOK</td></tr>
+    <tr class="font-semibold bg-slate-50"><td>Combined</td><td>4 refills</td><td colspan="2">Budget: 6 000 + 15 000 × 0.12 = 7 800.00 NOK</td><td>1 620.00 NOK</td></tr>
+  </tbody></table>
+  <p class="caption"><code>Money</code> refuses to add NOK to INR without an explicit conversion. Amounts are kept to 2 decimals with banker's rounding. The report also shows money still owed to volunteers and the top items bought (case-insensitive).</p>
+</section>
+
+<section id="mapping" aria-labelledby="mapping-h">
+  <h2 id="mapping-h">11. Each problem and how it is solved</h2>
+  <table><thead><tr><th scope="col">Problem in the brief</th><th scope="col">How it is prevented</th></tr></thead><tbody>
+    <tr><td>The box sits empty for days because everyone assumes someone else will refill it</td><td>One <strong>named</strong> person is asked, deadlines are enforced (2 h / 1 day), the refill is handed on automatically, and the last resort is an open call in the channel. Status and history are visible.</td></tr>
+    <tr><td>Two people buy snacks on the same day</td><td>One open refill per office, and one commit per refill (two locks plus a state guard). The channel is told who is buying. Anyone taken off a refill is told "don't buy".</td></tr>
+    <tr><td>A few people do most refills and wait weeks for their money</td><td>Fairness order (90-day window, unpaid claims, longest ago). The claim is filed when the receipt arrives and retried if HR is down. The report shows money still owed.</td></tr>
+    <tr><td>Nobody knows the monthly spend or which snacks get eaten</td><td>Spend per office in its own currency, a combined monthly report, and top items from the receipts.</td></tr>
+    <tr><td>Hybrid work, holidays, visitors</td><td>Volunteers are picked by daily presence at an office. A visitor refills against the visited office's budget, and HR pays them in their payroll currency.</td></tr>
+    <tr><td>Two time zones</td><td>"Today" and "this month" are per office. At 00:30 on 1 December, Bengaluru has its December budget while Oslo is still in November.</td></tr>
+  </tbody></table>
+</section>
+
+<section id="cases" aria-labelledby="cases-h">
+  <h2 id="cases-h">12. Every case handled, and the test that proves it</h2>
+  <label for="case-filter" class="block text-sm font-medium text-slate-700">Filter cases</label>
+  <input id="case-filter" type="search" placeholder="Try: HR, visitor, timeout, currency" class="mt-1 mb-4 w-full md:w-96 rounded-lg border border-slate-300 px-3 py-2">
+  <div class="overflow-x-auto">
+  <table id="cases-table"><thead><tr><th scope="col">Area</th><th scope="col">Case</th><th scope="col">What happens</th><th scope="col">Proven by</th></tr></thead><tbody>
+  </tbody></table>
+  </div>
+  <p id="case-count" class="caption" aria-live="polite"></p>
+</section>
+
+<section id="data" aria-labelledby="data-h">
+  <h2 id="data-h">13. Main parts and the data each keeps</h2>
+  <table><thead><tr><th scope="col">Layer</th><th scope="col">Part</th><th scope="col">Responsibility</th><th scope="col">Data it keeps</th></tr></thead><tbody>
+    <tr><td>controller</td><td><code>RefillController</code> and 3 others</td><td>HTTP ↔ DTOs only</td><td>Nothing</td></tr>
+    <tr><td>service</td><td><code>RefillService</code></td><td>Lifecycle, locking, deadlines, filing HR claims</td><td>Nothing: works on <code>Refill</code> objects</td></tr>
+    <tr><td>service</td><td><code>VolunteerSelector</code></td><td>Choosing who buys</td><td>Nothing: works from refill history and presence</td></tr>
+    <tr><td>service</td><td><code>PresenceService</code></td><td>Check-in rules (default dates, away)</td><td>Nothing: stored by <code>PresenceRepository</code></td></tr>
+    <tr><td>service</td><td><code>BudgetService</code></td><td>The budget check</td><td>Nothing: computed from receipts and config</td></tr>
+    <tr><td>service</td><td><code>MonthlyReportService</code></td><td>The management report</td><td>Nothing: computed. Rates come from <code>ExchangeRates</code></td></tr>
+    <tr><td>repository</td><td><code>RefillRepository</code></td><td>Stores refills</td><td><strong>Refill</strong>: office, status, assignee, deadline, handed-off people, receipt (payer, amount, date, items, image), HR claim id, history</td></tr>
+    <tr><td>repository</td><td><code>VolunteerRepository</code></td><td>Who has signed up</td><td>Employee id, name, home office</td></tr>
+    <tr><td>repository</td><td><code>PresenceRepository</code></td><td>Who is at which office on which day</td><td>(employee, date) → office</td></tr>
+    <tr><td>scheduler</td><td><code>RefillScheduler</code></td><td>Every minute: deadlines and HR sync</td><td>Nothing</td></tr>
+  </tbody></table>
+  <p class="caption"><strong>One source of truth</strong>: only refills and receipts are stored. Budgets, fairness and the report are derived from them, so they can never disagree.</p>
+</section>
+
+<section id="tradeoffs" aria-labelledby="tradeoffs-h">
+  <h2 id="tradeoffs-h">14. Trade-offs, and what is deliberately not built</h2>
+  <div class="grid md:grid-cols-2 gap-6 text-sm">
+    <div><h3>Trade-offs</h3><ul class="list-disc pl-5 space-y-1">
+      <li><strong>Budget in each office's own currency</strong>; exchange rates only for the report.</li>
+      <li><strong>Admin approval, not a hard stop</strong>, when over budget.</li>
+      <li><strong>Daily check-in</strong> for presence: simple, but people can forget, so the open call is the fallback.</li>
+      <li><strong>Clock-time deadlines</strong>, not working hours: simpler, configurable.</li>
+      <li><strong>Polling HR</strong>, not webhooks: it's another company's system.</li>
+      <li><strong>Stepping in is allowed</strong>: faster refills, but it can bypass the fairness order.</li>
+      <li><strong>In memory, one instance</strong>. For production: a database, a unique constraint for one open refill per office, and optimistic locking.</li>
+    </ul></div>
+    <div><h3>Deliberately not built</h3><ul class="list-disc pl-5 space-y-1">
+      <li>Receipt OCR: the volunteer types the amount, and HR checks the image.</li>
+      <li>Sensors or smart scales on the box.</li>
+      <li>Our own app or UI: chat is where people already are.</li>
+      <li>Per-snack consumption tracking.</li>
+      <li>Production chat and HR adapters, SSO, multiple instances.</li>
+      <li><strong>Policy idea</strong>: a company card or supplier delivery would remove reimbursement altogether.</li>
+    </ul></div>
+  </div>
+</section>
+
+<section id="summary" aria-labelledby="summary-h">
+  <h2 id="summary-h">Summary</h2>
+  <div class="grid md:grid-cols-3 gap-4 text-sm">
+    <div class="insight bg-blue-50 ring-blue-200"><p class="font-semibold text-brand-dark">Delivered</p><p class="mt-1">Design document, working lifecycle, choosing who buys, budget check, simulated chat and HR, monthly report, REST API, and a demo script.</p></div>
+    <div class="insight bg-green-50 ring-green-200"><p class="font-semibold text-green-900">Proven</p><p class="mt-1">120 tests: one buyer even under a race, automatic handover, correct budgets and totals in NOK and INR, time-zone month boundaries, HR down or rejecting, and the layer boundaries.</p></div>
+    <div class="insight bg-amber-50 ring-amber-200"><p class="font-semibold text-amber-900">Next steps</p><p class="mt-1">Real chat and HR adapters, persistent storage with database constraints, calendar or badge-based presence, and ask management about a company card.</p></div>
+  </div>
+</section>
+</main>
+</div>
+
+<script src="report.js"></script>
+</body>
+</html>
